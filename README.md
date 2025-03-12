@@ -22,7 +22,7 @@ The web panel doesn't need any login. So be careful when opening public access.
 
 ## 🗃️ Download Folder (thbo)
 
-As asked for a friend, I removed the folders, it just downloads the file like this: `{SongNum} - {Artist} - {Title}.mp3`
+As asked for a friend, I removed the folders, it just downloads the file like this: `{Artist} - {Title}.mp3`
 
 ---
 
