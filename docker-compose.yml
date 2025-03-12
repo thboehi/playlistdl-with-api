@@ -17,7 +17,15 @@ services:
       #Follow mariushosting tutorial on how to get user ID on Synology NAS if you host on NAS.
       # https://mariushosting.com/synology-find-uid-userid-and-gid-groupid-in-5-seconds/
       - AUDIO_DOWNLOAD_PATH=/your/local/path  # Use the env variable
-      - CLEANUP_INTERVAL=300  # Optional
+      
+      #SSH INFO, needed if you want to "touch" the file so Synology Drive can detects it.
+      # This is really messy but this is the only way I found to make it work.
+      # Please use admin account to login SSH, try from your terminal first.
+      - SSH_ENABLED: true
+      - SSH_HOST: "192.168.1.2" # Your NAS Local IP, not the Docker IP
+      - SSH_USER: "user" # Your NAS Local Admin user
+      - SSH_PASS: "password" # Your NAS Local Admin password
+
     volumes:
       - /your/local/path:/your/local/path:rw  # Reference env variable here as well
     restart: unless-stopped

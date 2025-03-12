@@ -9,7 +9,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install Python packages
-RUN pip install --no-cache-dir flask spotdl
+RUN pip install --no-cache-dir flask spotdl paramiko
 
 # Create directories
 WORKDIR /app

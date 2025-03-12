@@ -2,10 +2,19 @@ from flask import Flask, send_from_directory, jsonify, request, Response
 import subprocess
 import os
 import re
+import paramiko
+import time
 
 app = Flask(__name__, static_folder='web')
 BASE_DOWNLOAD_FOLDER = '/app/downloads'
 AUDIO_DOWNLOAD_PATH = os.getenv('AUDIO_DOWNLOAD_PATH', BASE_DOWNLOAD_FOLDER)
+
+# SSH TOUCH NEW VERSION - This part is for Synology Drive or other software that needs a touch to sync the file
+SSH_ENABLED = os.getenv('SSH_ENABLED', 'false')
+SSH_HOST = os.getenv('SSH_HOST')
+SSH_USER = os.getenv('SSH_USER')
+SSH_PASS = os.getenv('SSH_PASS')
+
 
 os.makedirs(BASE_DOWNLOAD_FOLDER, exist_ok=True)
 
@@ -44,6 +53,34 @@ def download_media():
 
     return Response(generate(command, download_folder), mimetype='text/event-stream')
 
+
+def touch_via_ssh(file_path):
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        # Connexion SSH au NAS
+        ssh.connect(SSH_HOST, port=22, username=SSH_USER, password=SSH_PASS)
+
+        # Générer la date actuelle au format touch (YYYYMMDDHHMM.SS)
+        current_time = time.strftime("%Y%m%d%H%M.%S", time.localtime())
+
+        # Exécuter la commande touch directement sur le NAS
+        cmd = f'touch -c -t {current_time} "{file_path}"'
+        stdin, stdout, stderr = ssh.exec_command(cmd)
+
+        output = stdout.read().decode().strip()
+        error = stderr.read().decode().strip()
+        ssh.close()
+
+        if error:
+            print(f"❌ Erreur SSH: {error}")
+        else:
+            print(f"✅ Commande SSH exécutée avec succès: {cmd}")
+
+    except Exception as e:
+        print(f"❌ Erreur de connexion SSH: {e}")
+
 def get_version():
     try:
         with open("VERSION", "r") as f:
@@ -78,7 +115,9 @@ def generate(command, download_folder):
                 latest_file_path = os.path.join(download_folder, latest_file)
                 os.chown(latest_file_path, target_uid, target_gid)
 
-                subprocess.run(["touch", latest_file_path])
+                # Si l'utilisateur a besoin qu'on fasse un touch sur le fichier pour le synchro avec Synology Drive ou autre.
+                if SSH_ENABLED == 'true':
+                    touch_via_ssh(latest_file_path)
                     
 
 
