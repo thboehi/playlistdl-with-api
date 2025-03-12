@@ -11,8 +11,10 @@
     <div class="container">
 
         <div class="container-title">
-            <h1>Sale Pirate <img src="cap.png" alt="Chapeau de pirate"> </h1>
-            <a href="https://thbo.ch/" target="_blank">thbo.ch</a>
+            <img src="swiper.webp" alt="Swiper" id="swiper">
+            <h1>Chipeur</h1>
+            <p>Arrête de choper</p>
+            <p><span id="version">Loading version...</span></p>
         </div>
         
         <input type="text" id="spotifyLink" placeholder="Link to a song or a playlist">
@@ -26,7 +28,17 @@
         <!-- Logs section -->
         <div id="logs" class="logs"></div>
     </div>
-
+    <script>
+        fetch('/version')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('version').innerText = data.version;
+            })
+            .catch(error => {
+                console.error("Error loading the version:", error);
+                document.getElementById('version').innerText = "unknown";
+            });
+    </script>
     <script src="script.js"></script>
     <script src="https://thbo.ch/credits.js"></script>
 </body>

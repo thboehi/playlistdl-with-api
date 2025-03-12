@@ -1,8 +1,13 @@
-
 services:
   playlistdl:
-    image: thomaboehi:playlistdlwithapi:latest
-    container_name: PlaylistDLWithAPI
+    image: thomaboehi/playlistdlwithapi:latest
+    container_name: PlaylistDLWithAPI_TEST
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
     ports:
       - "5005:5000"
     environment:

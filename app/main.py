@@ -1,22 +1,11 @@
 from flask import Flask, send_from_directory, jsonify, request, Response
 import subprocess
 import os
-import zipfile
-import uuid
-import shutil
-import threading
-import time
-import re  # Pour capturer le nom de l'album ou de la playlist
+import re
 
 app = Flask(__name__, static_folder='web')
 BASE_DOWNLOAD_FOLDER = '/app/downloads'
 AUDIO_DOWNLOAD_PATH = os.getenv('AUDIO_DOWNLOAD_PATH', BASE_DOWNLOAD_FOLDER)
-# Les variables d'authentification ne sont plus utilisées
-# ADMIN_USERNAME = os.getenv('ADMIN_USERNAME')
-# ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
-
-# On ne gère plus de sessions login, on simule toujours l'utilisateur connecté (admin)
-sessions = {}
 
 os.makedirs(BASE_DOWNLOAD_FOLDER, exist_ok=True)
 
@@ -52,11 +41,17 @@ def download_media():
             spotify_link
         ]
 
-    # Toujours admin, donc is_admin est True
-    is_admin = True
-    return Response(generate(is_admin, command, download_folder), mimetype='text/event-stream')
 
-def generate(is_admin, command, download_folder):
+    return Response(generate(command, download_folder), mimetype='text/event-stream')
+
+def get_version():
+    try:
+        with open("VERSION", "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return "unknown"
+
+def generate(command, download_folder):
     album_name = None  # Pour récupérer le nom de l'album ou de la playlist
     try:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -77,12 +72,14 @@ def generate(is_admin, command, download_folder):
             target_uid = int(os.environ.get("USER_ID", "1000"))
             target_gid = int(os.environ.get("GROUP_USER_ID", "1000"))
 
-            # Parcourir le dossier et modifier le propriétaire de chaque fichier et dossier
-            for root, dirs, files in os.walk(download_folder):
-                for name in files:
-                    os.chown(os.path.join(root, name), target_uid, target_gid)
-                for name in dirs:
-                    os.chown(os.path.join(root, name), target_uid, target_gid)
+            downloaded_files = [f for f in os.listdir(download_folder) if os.path.isfile(os.path.join(download_folder, f))]
+            if downloaded_files:
+                latest_file = max(downloaded_files, key=lambda f: os.path.getctime(os.path.join(download_folder, f)))
+                latest_file_path = os.path.join(download_folder, latest_file)
+                os.chown(latest_file_path, target_uid, target_gid)
+
+                subprocess.run(["touch", latest_file_path])
+                    
 
 
             # Pour admin, on ne fait pas de zip, ni de suppression automatique
@@ -93,10 +90,9 @@ def generate(is_admin, command, download_folder):
     except Exception as e:
         yield f"data: Error: {str(e)}\n\n"
 
-@app.route('/downloads/<session_id>/<filename>')
-def serve_download(session_id, filename):
-    session_download_folder = os.path.join(BASE_DOWNLOAD_FOLDER, session_id)
-    return send_from_directory(session_download_folder, filename, as_attachment=True)
+@app.route('/version')
+def version():
+    return jsonify({"version": get_version()})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
